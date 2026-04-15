@@ -38,6 +38,7 @@ Zwróć WYŁĄCZNIE czysty JSON:
     );
 
     const data = await response.json();
+console.log("AI RESPONSE:", JSON.stringify(data));
     let text = data.candidates[0].content.parts[0].text;
 
     // 🔥 wyciąganie JSON
