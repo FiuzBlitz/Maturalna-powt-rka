@@ -10,9 +10,27 @@ export default async function handler(req, res) {
   const { topic } = req.body;
   const API_KEY = process.env.GEMINI_API_KEY; // Zalecane: ustaw GEMINI_API_KEY w panelu Vercel
 
-  try {
-    // Używamy v1beta dla modelu Flash, aby uniknąć błędów 404
+    try {
+    const API_KEY = process.env.GEMINI_API_KEY;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+
+    console.log("Wysyłam zapytanie do:", url.replace(API_KEY, "REDACTED")); // loguje URL bez klucza dla bezpieczeństwa
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `Temat: ${topic}` }] }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("Błąd API Google:", response.status, errorData);
+      return res.status(response.status).json({ error: `Google API Error: ${response.status}`, details: errorData });
+    }
+    
+    // ... reszta kodu (data = await response.json())
 
     const response = await fetch(url, {
       method: "POST",
