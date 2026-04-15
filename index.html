@@ -133,16 +133,29 @@ function saveTheory(val) {
 }
 
 // MOCK QUIZ (na razie bez AI)
-function generateQuiz() {
-  const sample = {
-    question: "Czy 2+2=4?",
-    answers: ["A: Tak", "B: Nie"]
-  };
-  data.subjects[subjectIndex].topics[topicIndex].quiz = [sample];
-  save();
-  render();
-}
+async function generateQuiz() {
+  const topicName = data.subjects[subjectIndex].topics[topicIndex].name;
 
+  const res = await fetch("https://maturalna-powt-rka.vercel.app/api/quiz", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ topic: topicName })
+  });
+
+  const result = await res.json();
+
+  try {
+    const quiz = JSON.parse(result.text);
+    data.subjects[subjectIndex].topics[topicIndex].quiz = quiz;
+    save();
+    render();
+  } catch (e) {
+    console.error(result.text);
+    alert("AI zwróciło zły format — kliknij jeszcze raz");
+  }
+}
 function generateTasks() {
   const sample = {
     question: "Oblicz 5+5",
