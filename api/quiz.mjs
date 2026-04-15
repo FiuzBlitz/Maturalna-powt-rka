@@ -14,9 +14,10 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Brak klucza API w konfiguracji Vercel" });
   }
 
-  try {
-    // Próbujemy najpierw wersji v1 (stabilnej)
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+ try {
+    // 1. Ustawiamy wersję v1beta (wymagana dla modeli Preview)
+    // 2. Ustawiamy model gemini-3-flash-preview
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`;
 
     const googleAiResponse = await fetch(url, {
       method: "POST",
@@ -24,11 +25,37 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `Generuj 5 pytań ABCD dla tematu: ${topic}. Zwróć tylko JSON.`
+            text: `Stwórz 5 pytań testowych (ABCD) z tematu: ${topic}. 
+            Zwróć WYŁĄCZNIE czysty JSON w formacie tablicy obiektów:
+            [{"question":"...","answers":["A...","B...","C...","D..."],"correct":"A","explanation":"..."}]`
           }]
-        }]
+        }],
+        // Opcjonalnie dodaj konfigurację generowania dla lepszego formatu JSON
+        generationConfig: {
+          response_mime_type: "application/json"
+        }
       })
     });
+
+    const data = await googleAiResponse.json();
+
+    if (!googleAiResponse.ok) {
+      console.error("Szczegóły błędu Google API:", data);
+      return res.status(googleAiResponse.status).json({ 
+        error: "Błąd modelu Gemini 3", 
+        details: data.error ? data.error.message : data 
+      });
+    }
+
+    // Wyciąganie tekstu (Gemini 3 zwraca go w tej samej strukturze co 1.5)
+    let text = data.candidates[0].content.parts[0].text;
+
+    // Parsowanie i wysyłka
+    res.status(200).json({ text: JSON.parse(text) });
+
+  } catch (err) {
+    res.status(500).json({ error: "Błąd serwera", details: err.message });
+  }
 
     let data = await googleAiResponse.json();
 
