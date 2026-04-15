@@ -28,7 +28,10 @@ Zwróć czysty JSON:
     );
 
     const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
+    let text = data.candidates[0].content.parts[0].text;
+
+// usuwa ```json i ``` jeśli AI je doda
+text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
     res.status(200).json({ text });
 
