@@ -17,7 +17,7 @@ export default async function handler(req, res) {
           contents: [{
             parts: [{
               text: `Stwórz 5 pytań testowych (ABCD) z tematu: ${topic}.
-Zwróć czysty JSON:
+Zwróć WYŁĄCZNIE czysty JSON (bez żadnych komentarzy, bez \`\`\`):
 [
  {\"question\":\"...\",\"answers\":[\"A...\",\"B...\",\"C...\",\"D...\"],\"correct\":\"A\",\"explanation\":\"...\"}
 ]`
@@ -30,8 +30,13 @@ Zwróć czysty JSON:
     const data = await response.json();
     let text = data.candidates[0].content.parts[0].text;
 
-// usuwa ```json i ``` jeśli AI je doda
-text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    // 🔥 WYCIĄGAMY TYLKO JSON
+    const start = text.indexOf("[");
+    const end = text.lastIndexOf("]");
+
+    if (start !== -1 && end !== -1) {
+      text = text.substring(start, end + 1);
+    }
 
     res.status(200).json({ text });
 
