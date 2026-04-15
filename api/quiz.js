@@ -1,4 +1,14 @@
 export default async function handler(req, res) {
+  // 🔥 CORS HEADERS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // 🔥 obsługa OPTIONS
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Only POST allowed" });
   }
@@ -17,7 +27,7 @@ export default async function handler(req, res) {
           contents: [{
             parts: [{
               text: `Stwórz 5 pytań testowych (ABCD) z tematu: ${topic}.
-Zwróć WYŁĄCZNIE czysty JSON (bez żadnych komentarzy, bez \`\`\`):
+Zwróć WYŁĄCZNIE czysty JSON:
 [
  {\"question\":\"...\",\"answers\":[\"A...\",\"B...\",\"C...\",\"D...\"],\"correct\":\"A\",\"explanation\":\"...\"}
 ]`
@@ -30,7 +40,7 @@ Zwróć WYŁĄCZNIE czysty JSON (bez żadnych komentarzy, bez \`\`\`):
     const data = await response.json();
     let text = data.candidates[0].content.parts[0].text;
 
-    // 🔥 WYCIĄGAMY TYLKO JSON
+    // 🔥 wyciąganie JSON
     const start = text.indexOf("[");
     const end = text.lastIndexOf("]");
 
