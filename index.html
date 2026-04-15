@@ -6,8 +6,11 @@
   <style>
     body { font-family: Arial; margin: 0; padding: 20px; }
     .btn { padding: 10px; margin: 5px; border-radius: 8px; background:#eee; cursor:pointer; display:inline-block; }
-    .container { max-width: 800px; margin:auto; }
+    .container { max-width: 900px; margin:auto; }
     textarea { width:100%; height:150px; }
+    .tabs { margin-top:20px; }
+    .tab { padding:10px; display:inline-block; cursor:pointer; background:#ddd; margin-right:5px; border-radius:6px; }
+    .active { background:#bbb; }
   </style>
 </head>
 <body>
@@ -26,6 +29,7 @@ let data = JSON.parse(localStorage.getItem("maturaApp")) || {
 
 let subjectIndex = null;
 let topicIndex = null;
+let activeTab = "theory";
 
 function save() {
   localStorage.setItem("maturaApp", JSON.stringify(data));
@@ -58,16 +62,57 @@ function render() {
 
   app.innerHTML += `<button onclick='backTopic()'>⬅️</button><h2>${topic.name}</h2>`;
 
+  // TABS
   app.innerHTML += `
-    <h3>📘 Teoria</h3>
-    <textarea onchange='saveTheory(this.value)'>${topic.theory || ""}</textarea>
-
-    <h3>🧠 Quiz</h3>
-    <button onclick='generateQuiz()'>Generuj quiz (AI później)</button>
-
-    <h3>✍️ Zadania</h3>
-    <button onclick='generateTasks()'>Generuj zadania (AI później)</button>
+    <div class="tabs">
+      <div class="tab ${activeTab==='theory'?'active':''}" onclick="setTab('theory')">📘 Teoria</div>
+      <div class="tab ${activeTab==='quiz'?'active':''}" onclick="setTab('quiz')">🧠 Quiz</div>
+      <div class="tab ${activeTab==='tasks'?'active':''}" onclick="setTab('tasks')">✍️ Zadania</div>
+    </div>
   `;
+
+  if (activeTab === "theory") {
+    app.innerHTML += `
+      <h3>Teoria</h3>
+      <textarea onchange='saveTheory(this.value)'>${topic.theory || ""}</textarea>
+    `;
+  }
+
+  if (activeTab === "quiz") {
+    app.innerHTML += `
+      <h3>Quiz</h3>
+      <button onclick='generateQuiz()'>Generuj quiz</button>
+      <div id="quiz"></div>
+    `;
+
+    if (topic.quiz) {
+      topic.quiz.forEach(q => {
+        app.innerHTML += `<p><b>${q.question}</b></p>`;
+        q.answers.forEach(a => {
+          app.innerHTML += `<div>${a}</div>`;
+        });
+      });
+    }
+  }
+
+  if (activeTab === "tasks") {
+    app.innerHTML += `
+      <h3>Zadania</h3>
+      <button onclick='generateTasks()'>Generuj zadania</button>
+      <div id="tasks"></div>
+    `;
+
+    if (topic.tasks) {
+      topic.tasks.forEach(t => {
+        app.innerHTML += `<p><b>${t.question}</b></p><p>${t.answer}</p>`;
+      });
+    }
+  }
+}
+
+function setTab(tab) {
+  activeTab = tab;
+  render();
 }
 
 function openSubject(i) { subjectIndex = i; render(); }
@@ -78,7 +123,7 @@ function backTopic() { topicIndex = null; render(); }
 function addTopic() {
   const name = prompt("Nazwa działu:");
   if (!name) return;
-  data.subjects[subjectIndex].topics.push({ name, theory:"" });
+  data.subjects[subjectIndex].topics.push({ name, theory:"", quiz:[], tasks:[] });
   save(); render();
 }
 
@@ -87,12 +132,25 @@ function saveTheory(val) {
   save();
 }
 
+// MOCK QUIZ (na razie bez AI)
 function generateQuiz() {
-  alert("Tu dodamy AI 🔥");
+  const sample = {
+    question: "Czy 2+2=4?",
+    answers: ["A: Tak", "B: Nie"]
+  };
+  data.subjects[subjectIndex].topics[topicIndex].quiz = [sample];
+  save();
+  render();
 }
 
 function generateTasks() {
-  alert("Tu dodamy AI 🔥");
+  const sample = {
+    question: "Oblicz 5+5",
+    answer: "10"
+  };
+  data.subjects[subjectIndex].topics[topicIndex].tasks = [sample];
+  save();
+  render();
 }
 
 render();
