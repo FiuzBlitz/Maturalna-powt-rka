@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Matura App</title>
+  <style>
+    body { font-family: Arial; margin: 0; padding: 20px; }
+    .btn { padding: 10px; margin: 5px; border-radius: 8px; background:#eee; cursor:pointer; display:inline-block; }
+    .container { max-width: 800px; margin:auto; }
+    textarea { width:100%; height:150px; }
+  </style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+let data = JSON.parse(localStorage.getItem("maturaApp")) || {
+  subjects: [
+    { name: "Matematyka", topics: [] },
+    { name: "Polski", topics: [] },
+    { name: "Angielski", topics: [] },
+    { name: "Geografia", topics: [] },
+    { name: "Historia", topics: [] }
+  ]
+};
+
+let subjectIndex = null;
+let topicIndex = null;
+
+function save() {
+  localStorage.setItem("maturaApp", JSON.stringify(data));
+}
+
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  if (subjectIndex === null) {
+    app.innerHTML += "<h1>Przedmioty</h1>";
+    data.subjects.forEach((s, i) => {
+      app.innerHTML += `<div class='btn' onclick='openSubject(${i})'>${s.name}</div>`;
+    });
+    return;
+  }
+
+  if (topicIndex === null) {
+    const subj = data.subjects[subjectIndex];
+    app.innerHTML += `<button onclick='back()'>⬅️</button><h2>${subj.name}</h2>`;
+    app.innerHTML += `<div class='btn' onclick='addTopic()'>➕ Dodaj dział</div>`;
+
+    subj.topics.forEach((t, i) => {
+      app.innerHTML += `<div class='btn' onclick='openTopic(${i})'>${t.name}</div>`;
+    });
+    return;
+  }
+
+  const topic = data.subjects[subjectIndex].topics[topicIndex];
+
+  app.innerHTML += `<button onclick='backTopic()'>⬅️</button><h2>${topic.name}</h2>`;
+
+  app.innerHTML += `
+    <h3>📘 Teoria</h3>
+    <textarea onchange='saveTheory(this.value)'>${topic.theory || ""}</textarea>
+
+    <h3>🧠 Quiz</h3>
+    <button onclick='generateQuiz()'>Generuj quiz (AI później)</button>
+
+    <h3>✍️ Zadania</h3>
+    <button onclick='generateTasks()'>Generuj zadania (AI później)</button>
+  `;
+}
+
+function openSubject(i) { subjectIndex = i; render(); }
+function openTopic(i) { topicIndex = i; render(); }
+function back() { subjectIndex = null; render(); }
+function backTopic() { topicIndex = null; render(); }
+
+function addTopic() {
+  const name = prompt("Nazwa działu:");
+  if (!name) return;
+  data.subjects[subjectIndex].topics.push({ name, theory:"" });
+  save(); render();
+}
+
+function saveTheory(val) {
+  data.subjects[subjectIndex].topics[topicIndex].theory = val;
+  save();
+}
+
+function generateQuiz() {
+  alert("Tu dodamy AI 🔥");
+}
+
+function generateTasks() {
+  alert("Tu dodamy AI 🔥");
+}
+
+render();
+</script>
+</body>
+</html>
