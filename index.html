@@ -2,21 +2,28 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <title>Matura App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matura App - Generator Quizów</title>
   <style>
-    body { font-family: Arial; margin: 0; padding: 20px; }
-    .btn { padding: 10px; margin: 5px; border-radius: 8px; background:#eee; cursor:pointer; display:inline-block; }
-    .container { max-width: 900px; margin:auto; }
-    textarea { width:100%; height:150px; }
-    .tabs { margin-top:20px; }
-    .tab { padding:10px; display:inline-block; cursor:pointer; background:#ddd; margin-right:5px; border-radius:6px; }
-    .active { background:#bbb; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; line-height: 1.6; background: #f4f7f6; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn { padding: 10px 15px; margin: 5px; border-radius: 8px; border: none; background: #007bff; color: white; cursor: pointer; transition: 0.3s; }
+    .btn:hover { background: #0056b3; }
+    .btn-back { background: #6c757d; }
+    textarea { width: 100%; height: 150px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+    .tabs { margin: 20px 0; border-bottom: 2px solid #eee; }
+    .tab { padding: 10px 20px; display: inline-block; cursor: pointer; background: #eee; margin-right: 5px; border-radius: 8px 8px 0 0; }
+    .tab.active { background: #007bff; color: white; }
+    .quiz-item { background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
+    .answer-item { background: white; padding: 5px 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+    h1, h2 { color: #333; }
   </style>
 </head>
 <body>
 <div class="container" id="app"></div>
 
 <script>
+// Inicjalizacja danych z localStorage
 let data = JSON.parse(localStorage.getItem("maturaApp")) || {
   subjects: [
     { name: "Matematyka", topics: [] },
@@ -30,6 +37,7 @@ let data = JSON.parse(localStorage.getItem("maturaApp")) || {
 let subjectIndex = null;
 let topicIndex = null;
 let activeTab = "theory";
+let isLoading = false;
 
 function save() {
   localStorage.setItem("maturaApp", JSON.stringify(data));
@@ -39,89 +47,89 @@ function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
 
+  // Widok listy przedmiotów
   if (subjectIndex === null) {
-    app.innerHTML += "<h1>Przedmioty</h1>";
+    app.innerHTML += "<h1>Wybierz Przedmiot</h1>";
     data.subjects.forEach((s, i) => {
-      app.innerHTML += `<div class='btn' onclick='openSubject(${i})'>${s.name}</div>`;
+      app.innerHTML += `<button class='btn' onclick='openSubject(${i})'>${s.name}</button>`;
     });
     return;
   }
 
+  // Widok listy działów w przedmiocie
   if (topicIndex === null) {
     const subj = data.subjects[subjectIndex];
-    app.innerHTML += `<button onclick='back()'>⬅️</button><h2>${subj.name}</h2>`;
-    app.innerHTML += `<div class='btn' onclick='addTopic()'>➕ Dodaj dział</div>`;
+    app.innerHTML += `<button class='btn btn-back' onclick='back()'>⬅️ Powrót</button><h2>${subj.name}</h2>`;
+    app.innerHTML += `<button class='btn' style='background:#28a745' onclick='addTopic()'>➕ Dodaj nowy dział</button><br><br>`;
+
+    if (subj.topics.length === 0) app.innerHTML += "<p>Brak dodanych działów.</p>";
 
     subj.topics.forEach((t, i) => {
-      app.innerHTML += `<div class='btn' onclick='openTopic(${i})'>${t.name}</div>`;
+      app.innerHTML += `<button class='btn' onclick='openTopic(${i})'>${t.name}</button>`;
     });
     return;
   }
 
+  // Widok konkretnego działu
   const topic = data.subjects[subjectIndex].topics[topicIndex];
+  app.innerHTML += `<button class='btn btn-back' onclick='backTopic()'>⬅️ Powrót do listy</button><h2>${topic.name}</h2>`;
 
-  app.innerHTML += `<button onclick='backTopic()'>⬅️</button><h2>${topic.name}</h2>`;
-
-  // TABS
+  // Taby
   app.innerHTML += `
     <div class="tabs">
       <div class="tab ${activeTab==='theory'?'active':''}" onclick="setTab('theory')">📘 Teoria</div>
-      <div class="tab ${activeTab==='quiz'?'active':''}" onclick="setTab('quiz')">🧠 Quiz</div>
-      <div class="tab ${activeTab==='tasks'?'active':''}" onclick="setTab('tasks')">✍️ Zadania</div>
+      <div class="tab ${activeTab==='quiz'?'active':''}" onclick="setTab('quiz')">🧠 Quiz AI</div>
     </div>
   `;
 
   if (activeTab === "theory") {
     app.innerHTML += `
-      <h3>Teoria</h3>
-      <textarea onchange='saveTheory(this.value)'>${topic.theory || ""}</textarea>
+      <h3>Notatki z teorii</h3>
+      <textarea placeholder="Wpisz tutaj swoją teorię..." onchange='saveTheory(this.value)'>${topic.theory || ""}</textarea>
+      <p><small>Zmiany zapisują się automatycznie po wyjściu z pola tekstowego.</small></p>
     `;
   }
 
   if (activeTab === "quiz") {
     app.innerHTML += `
-      <h3>Quiz</h3>
-      <button onclick='generateQuiz()'>Generuj quiz</button>
-      <div id="quiz"></div>
+      <h3>Generator Quizu AI</h3>
+      <button class='btn' onclick='generateQuiz()' ${isLoading ? 'disabled' : ''}>
+        ${isLoading ? 'Generowanie...' : '✨ Generuj 5 pytań (AI)'}
+      </button>
+      <div id="quiz-container" style="margin-top:20px"></div>
     `;
 
-    if (topic.quiz) {
-      topic.quiz.forEach(q => {
-        app.innerHTML += `<p><b>${q.question}</b></p>`;
-        q.answers.forEach(a => {
-          app.innerHTML += `<div>${a}</div>`;
-        });
+    const qContainer = document.getElementById("quiz-container");
+    if (topic.quiz && topic.quiz.length > 0) {
+      topic.quiz.forEach((q, i) => {
+        let answersHtml = q.answers.map(a => `<div class="answer-item">${a}</div>`).join("");
+        qContainer.innerHTML += `
+          <div class="quiz-item">
+            <p><strong>${i+1}. ${q.question}</strong></p>
+            ${answersHtml}
+            <details>
+              <summary style="cursor:pointer; color:#007bff">Pokaż poprawną odpowiedź</summary>
+              <p style="color:#28a745; font-weight:bold">Poprawna: ${q.correct}</p>
+              <p><small>${q.explanation || ""}</small></p>
+            </details>
+          </div>
+        `;
       });
-    }
-  }
-
-  if (activeTab === "tasks") {
-    app.innerHTML += `
-      <h3>Zadania</h3>
-      <button onclick='generateTasks()'>Generuj zadania</button>
-      <div id="tasks"></div>
-    `;
-
-    if (topic.tasks) {
-      topic.tasks.forEach(t => {
-        app.innerHTML += `<p><b>${t.question}</b></p><p>${t.answer}</p>`;
-      });
+    } else if (!isLoading) {
+      qContainer.innerHTML = "<p>Brak pytań. Kliknij przycisk powyżej, aby AI przygotowało test.</p>";
     }
   }
 }
 
-function setTab(tab) {
-  activeTab = tab;
-  render();
-}
-
+// Nawigacja i Akcje
+function setTab(tab) { activeTab = tab; render(); }
 function openSubject(i) { subjectIndex = i; render(); }
 function openTopic(i) { topicIndex = i; render(); }
 function back() { subjectIndex = null; render(); }
 function backTopic() { topicIndex = null; render(); }
 
 function addTopic() {
-  const name = prompt("Nazwa działu:");
+  const name = prompt("Podaj nazwę działu (np. Funkcja kwadratowa):");
   if (!name) return;
   data.subjects[subjectIndex].topics.push({ name, theory:"", quiz:[], tasks:[] });
   save(); render();
@@ -132,38 +140,43 @@ function saveTheory(val) {
   save();
 }
 
-// MOCK QUIZ (na razie bez AI)
+// KOMUNIKACJA Z API
 async function generateQuiz() {
-  const topicName = data.subjects[subjectIndex].topics[topicIndex].name;
-
-  const res = await fetch("https://maturalna-powt-rka.vercel.app/api/quiz", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ topic: topicName })
-  });
-
-  const result = await res.json();
+  const topic = data.subjects[subjectIndex].topics[topicIndex];
+  isLoading = true;
+  render();
 
   try {
-    const quiz = JSON.parse(result.text);
-    data.subjects[subjectIndex].topics[topicIndex].quiz = quiz;
+    const res = await fetch("/api/quiz", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic.name })
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) throw new Error(result.error || "Błąd serwera");
+
+    // Jeśli backend zwraca pole 'text' jako string lub obiekt
+    let quizData = result.text;
+    if (typeof quizData === "string") {
+      // Próba wycięcia JSON jeśli AI dopisało komentarz
+      const start = quizData.indexOf("[");
+      const end = quizData.lastIndexOf("]");
+      if (start !== -1 && end !== -1) {
+        quizData = JSON.parse(quizData.substring(start, end + 1));
+      }
+    }
+
+    topic.quiz = quizData;
     save();
+  } catch (err) {
+    console.error("Błąd podczas generowania quizu:", err);
+    alert("Nie udało się wygenerować quizu. Sprawdź konsolę i logi Vercel.");
+  } finally {
+    isLoading = false;
     render();
-  } catch (e) {
-    console.error(result.text);
-    alert("AI zwróciło zły format — kliknij jeszcze raz");
   }
-}
-function generateTasks() {
-  const sample = {
-    question: "Oblicz 5+5",
-    answer: "10"
-  };
-  data.subjects[subjectIndex].topics[topicIndex].tasks = [sample];
-  save();
-  render();
 }
 
 render();
